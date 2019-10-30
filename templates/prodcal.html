@@ -1,0 +1,252 @@
+{% extends "admin/base_site.html" %}
+
+{% load static i18n%}
+{% load admin_urls %}
+
+{% block extrahead %}
+<script type="text/javascript" src="{% static 'prodcal/js/jquery.min.js' %}"></script>
+<script type="text/javascript" src="{% static 'prodcal/js/jquery-ui.min.js' %}"></script>
+<script type="text/javascript" src="{% static 'prodcal/js/jquery-ui.multidatespicker.js' %}"></script>
+<script type="text/javascript" src="{% static 'prodcal/js/datepicker-ru.js' %}"></script>
+{% endblock %}
+
+{% block extrastyle %}
+<link type="text/css" rel="stylesheet" href="{% static 'prodcal/css/jquery-ui.min.css' %}">
+<link type="text/css" rel="stylesheet" href="{% static 'prodcal/css/jquery-ui.multidatespicker.css' %}">
+<link type="text/css" rel="stylesheet" href="{% static 'prodcal/css/prodcal.css' %}">
+{% endblock %}
+
+{% block breadcrumbs %}
+    <div class="breadcrumbs">
+        <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+        &rsaquo;
+        <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+        &rsaquo;
+        <a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+    </div>
+{% endblock %}
+
+
+{% block content %}
+
+<div id="the whole thing" style="height:100%; width:100%; overflow: hidden;">
+<select {% if locale_supporting|length < 2 %}disabled{% endif %} id='locale_select' style="float: left;">
+  {% for locale_code, locale_name in locale_supporting %}
+  <option value="{% url 'admin:prodcal' locale_code %}" {% if locale_code == locale %}selected{% endif %}>{{ locale_name }}</option>
+  {% endfor %}
+</select>
+
+    <ul class="years_pagination" id="years_paginator"  style="float: left;"></ul>
+
+</div>
+
+<div id="mdp-demo"></div>
+
+<br>
+<hr>
+<br>
+<button class="button"  id="clean_but" {% if not addDates|length %} disabled{% endif %}>Очистить</button>
+<button class="button" id="сancel_but" disabled>Вернуть</button>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<button class="button" id="save_but"  disabled>Сохранить</button>
+<br>
+<br>
+<div id='save_message'>
+
+</div>
+
+<script>
+    function InitProdcalEditor($container) {
+        // Initialization
+        var addDates = [];
+        var year = (sessionStorage.prodcal_year) ? sessionStorage.prodcal_year : {{year}};
+        var year_min = {{year_min}};
+        var year_max = {{year_max}};
+        var paginate_by ={{paginate_by}};
+
+        generatePaginator();
+        $.ajaxSetup({
+            headers: { "X-CSRFToken": '{{csrf_token}}' }
+        });
+        getDays(year);
+
+        // Functions definitions
+        function generatePaginator(){
+            var page_num = parseInt((year - year_min)/paginate_by + 1);
+            var year_first = year_min + paginate_by * (page_num - 1);
+            var year_prev = year_first - 1;
+            var year_next = year_min + paginate_by * (page_num);
+            var year_last = (year_next > year_max) ? year_max : year_next;
+            var cls_prev = (year_prev < year_min) ? ' disabled' : '';
+            var cls_next = (year_next > year_max) ? ' disabled' : '';
+            var paginator_http =
+            '<li class="' + cls_prev + '"><a class="year" id="year_' + year_prev + '"> << </a></li>';
+            for (y = year_first; y < year_last; y++){
+                var cls = (y == year) ? ' active' : '';
+                paginator_http +=
+                '<li class="' + cls + '"><a class="year" id=year_' + y + '>' + y + '</a></li>';
+            };
+            paginator_http +=
+            '<li class="' + cls_next + '"><a class="year" id="year_' + year_next + '"> >> </a></li>';
+            $( "#years_paginator" )
+                .html( paginator_http );
+            $("a.year").unbind('click');
+            $('a.year').click(onYearChange);
+        };
+
+        function initMultiDatePicker(year_to_init, addDates_to_init){
+            $('#mdp-demo').multiDatesPicker({
+                numberOfMonths: [2,6],
+                defaultDate: '1.1.' + year,
+                dateFormat: "dd.mm.yy",
+                minDate: '1.1.' + year_to_init, // January, 1
+                maxDate: '31.12.' + year_to_init, // December, 31
+                onSelect: onSelectionChange,
+            });
+            if (addDates_to_init.length){
+                $('#mdp-demo').multiDatesPicker('addDates', addDates);
+            }
+
+        };
+
+        // https://stackoverflow.com/a/5186565
+        jQuery.extend({
+            compare: function (arrayA, arrayB) {
+                if (arrayA.length != arrayB.length) { return false; }
+                for (var i = 0, l = arrayA.length; i < l; i++) {
+                    if (arrayA[i] !== arrayB[i]) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+        });
+
+        function onSelectionChange(){
+            var selected_dates = $('#mdp-demo').multiDatesPicker('getDates', 'string');
+            if (jQuery.compare(selected_dates, default_selected_dates)){
+                $("#save_but").prop("disabled", true);
+                $("#сancel_but").prop("disabled", true);
+            }
+            else {
+                $("#save_but").prop("disabled", false);
+                $("#сancel_but").prop("disabled", false);
+                message_clear();
+            };
+            if (selected_dates.length > 0) {
+                $("#clean_but").prop("disabled", false);
+            }
+            else {
+                $("#clean_but").prop("disabled", true);
+            }
+        };
+
+        function getDays(year_to_get){
+            $.ajax({
+                type: "POST",
+                contentType: "application/json",
+                //url: "/workflow/prodcal/{{locale}}/",
+                'data': JSON.stringify({'action': 'get', 'year': year_to_get}),
+                dataType: "json",
+                success : function(json) {
+                    year = year_to_get;
+                    sessionStorage.prodcal_year = year;
+                    generatePaginator();
+                    addDates = json['result'];
+                    $('#mdp-demo').multiDatesPicker('resetDates');
+                    $('#mdp-demo').multiDatesPicker('destroy');
+                    initMultiDatePicker(year, addDates);
+                    default_selected_dates = $('#mdp-demo').multiDatesPicker('getDates', 'string');
+                    onSelectionChange();
+                },
+                error : function(xhr,errmsg,err) {
+                    alert('Ошибка сети!');
+                }
+            });
+        }
+
+        function onYearChange(){
+            var id = $(this).attr('id');
+            id = id.replace('year_', '');
+            id_year = parseInt(id);
+            if (id_year == year) {return};
+            if ($("#save_but").prop('disabled') == false){
+                want_to_save = !confirm("Изменения внесенные в " + year + "г. не сохранены и будут утеряны!");
+                if (want_to_save) {
+                    return;
+                }
+            };
+            getDays(id_year);
+            message_clear();
+        };
+
+        function json_dates_array(dates){
+            var dates_array = [];
+            for (i=0; i<dates.length; i++){
+                    dates_array.push([dates[i].getMonth() + 1, dates[i].getDate()])
+            }
+            return JSON.stringify({'action': 'save', 'year': year, 'dates': dates_array});
+        }
+
+        function message(text){
+            var messageHtml =  '<ul class="messagelist"><li>' + text + '</li></ul>';
+            $("#save_message").html(messageHtml);
+        }
+
+        function message_clear(){
+            $("#save_message").html('');
+        }
+
+        // Buttons bindings
+        $("#save_but").unbind('click');
+        $("#save_but").click(function() {
+            //var toastSaving = M.toast({html: 'Сохраняю...', displayLength: 5000, classes:'alert-{{ message.tags }}'});
+            sel_dates = $('#mdp-demo').multiDatesPicker('getDates', 'object');
+            $.ajax({
+                type: "POST",
+                contentType: "application/json",
+                //url: "/workflow/prodcal/{{locale}}/",
+                'data': json_dates_array(sel_dates),
+                dataType: "json",
+                success : function(json) {
+                    //toastSaving.dismiss();
+                    message('Успешно сохранено');
+                    default_selected_dates = $('#mdp-demo').multiDatesPicker('getDates', 'string');
+                    onSelectionChange();
+                },
+                error : function(xhr,errmsg,err) {
+                    alert('Ошибка сохранения!');
+                }
+            });
+        });
+
+        $("#сancel_but").click(function() {
+            $('#mdp-demo').multiDatesPicker('resetDates');
+            if (default_selected_dates.length){
+                $('#mdp-demo').multiDatesPicker('addDates', default_selected_dates);
+            }
+            onSelectionChange();
+        });
+
+        $("#clean_but").click(function() {
+            $('#mdp-demo').multiDatesPicker('resetDates');
+            onSelectionChange();
+        });
+
+ var urlmenu = document.getElementById( 'locale_select' );
+ urlmenu.onchange = function() {
+      window.location.href =  this.options[ this.selectedIndex ].value;
+ };
+
+
+    };
+    
+$(document).ready(function() { 
+    InitProdcalEditor($(document)) })
+
+
+</script>
+
+
+{% endblock %}
+

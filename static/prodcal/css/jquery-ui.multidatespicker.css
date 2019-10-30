@@ -1,0 +1,103 @@
+/* jQuery UI Datepicker moving pixels fix */
+table.ui-datepicker-calendar {border-collapse: separate;}
+.ui-datepicker-calendar td {border: 1px solid transparent;}
+
+/* jQuery UI Datepicker hide datepicker helper */
+#ui-datepicker-div {display:none;}
+
+/* Выходные даты */
+.ui-datepicker-week-end a {
+    color: red !important;
+}
+/* Выходные названия дней недели*/
+.ui-datepicker-week-end {
+    color: red !important;
+}
+
+/* Выбранный рабочий день - помечать красным как выходной */
+.ui-datepicker .ui-datepicker-calendar .ui-state-highlight a {
+	background: red none;
+	color: white;
+    font-weight: bold;
+}
+
+/* Выбранный выходной - помечен синим как рабочий */
+.ui-datepicker .ui-datepicker-calendar .ui-datepicker-week-end.ui-state-highlight a {
+	background: blue none;
+	color: white  !important;
+	font-weight: bold;
+}
+
+
+/* Чтобы первый день года (выделенный) в MultiDatePicker не был синим */
+.ui-state-active,
+.ui-widget-content .ui-state-active,
+.ui-widget-header .ui-state-active,
+a.ui-button:active,
+.ui-button:active,
+.ui-button.ui-state-active:hover {
+border: 1px solid #c5c5c5;
+	background: #f6f6f6;
+	font-weight: normal;
+	color: #454545;
+}
+
+/* Чтобы стрелки перд. и след. исчезли, если они disabled */
+.ui-datepicker-prev.ui-corner-all.ui-state-disabled,
+.ui-datepicker-next.ui-corner-all.ui-state-disabled
+{
+	visibility: hidden;
+}
+
+/* Заголовки с месяцами */
+.ui-widget-header
+{
+	background: #ffffff;
+	border: 0px solid #c2bebe;
+	/*font-size: larger;*/ 
+	color: #37474f;
+}
+
+
+/* Отступы между месяцами */
+.ui-datepicker-group.ui-datepicker-group-first,
+.ui-datepicker-group.ui-datepicker-group-middle,
+.ui-datepicker-group.ui-datepicker-group-last
+{
+	margin-left: 0.5em;
+	margin-right: 0.5em;
+}
+
+/* граница календаря */
+.ui-widget.ui-widget-content
+{
+	border: 0px solid #c5c5c5;
+}
+
+/* ширина календаря */
+.ui-datepicker-inline.ui-datepicker.ui-widget.ui-widget-content.ui-helper-clearfix.ui-corner-all.ui-datepicker-multi-6.ui-datepicker-multi
+{
+	width:100% !important;
+}
+
+.hasDatepicker
+{
+	font-size: 10px !important;
+
+}
+
+@media (min-width: 1024px){
+ .hasDatepicker {
+	font-size: 0.85vw !important;
+  }
+}
+
+@media (min-width: 1921px)
+{
+	font-size: 12px !important;
+}
+
+.card .card-content
+{
+    padding-top: 1px;
+}
